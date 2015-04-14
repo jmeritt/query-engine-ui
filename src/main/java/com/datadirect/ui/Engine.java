@@ -18,7 +18,7 @@ public class Engine
     static QueryEngine get(String username, String password)
     {
         //purposeful race condition - ahh prototypes
-        m_engine = new D2CQueryEngineImpl(username, password);
+        m_engine = new D2CQueryEngineImpl("localhost", 31000, username, password);
         return m_engine;
     }
 }

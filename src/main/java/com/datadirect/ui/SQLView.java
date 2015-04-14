@@ -1,19 +1,23 @@
 package com.datadirect.ui;
 
+import com.vaadin.data.Item;
+import com.vaadin.data.util.sqlcontainer.SQLContainer;
 import com.vaadin.data.util.sqlcontainer.connection.J2EEConnectionPool;
 import com.vaadin.data.util.sqlcontainer.connection.JDBCConnectionPool;
+import com.vaadin.data.util.sqlcontainer.query.TableQuery;
+import com.vaadin.data.util.sqlcontainer.query.generator.DefaultSQLGenerator;
+import com.vaadin.data.util.sqlcontainer.query.generator.MSSQLGenerator;
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener;
 import com.vaadin.shared.ui.MarginInfo;
-import com.vaadin.ui.Alignment;
-import com.vaadin.ui.CustomComponent;
-import com.vaadin.ui.Table;
-import com.vaadin.ui.VerticalLayout;
+import com.vaadin.ui.*;
 import com.vaadin.ui.themes.Reindeer;
 
 import javax.sql.DataSource;
 import java.io.PrintWriter;
 import java.sql.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -23,23 +27,35 @@ public class SQLView extends CustomComponent implements View {
 
     public static final String NAME = "sql";
     private final DataSource source;
+    private final Panel panel;
     private JDBCConnectionPool m_pool;
+    private Tree tree;
     private Table table;
+
+    private Button open = new Button("Open Table", new Button.ClickListener() {
+        @Override
+        public void buttonClick(Button.ClickEvent event) {
+            String selectedTable = (String) tree.getValue();
+            try {
+                table = new Table(selectedTable, new SQLContainer(new TableQuery(selectedTable,m_pool, new TeiidSQLGenerator())));
+                table.setParent(panel);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    });
 
     public SQLView() {
 
         source = new EngineDataSource();
-        table = new Table("Catalogs");
-        table.addContainerProperty("Catalog", String.class, null);
-        table.addContainerProperty("Schema", String.class, null);
-        table.addContainerProperty("Table", String.class, null);
+        tree = new Tree();
+        panel = new Panel("Contents");
 
-
-        VerticalLayout fields = new VerticalLayout(table);
-        fields.setCaption("Database Metadata");
+        HorizontalLayout fields = new HorizontalLayout(new VerticalLayout(open, tree), panel);
         fields.setSpacing(true);
         fields.setMargin(new MarginInfo(true, true, true, false));
         fields.setSizeUndefined();
+
 
         // The view root layout
         VerticalLayout viewLayout = new VerticalLayout(fields);
@@ -69,9 +85,21 @@ public class SQLView extends CustomComponent implements View {
             String tableNamePattern = null;
             String[] types = null;
 
+            String root = "D2CVDB";
+            tree.addItem(root);
             ResultSet result = meta.getTables(catalog, schemaPattern, tableNamePattern, types);
             for (int i = 1; result.next(); i++) {
-                table.addItem(new Object[]{result.getString(1), result.getString(2), result.getString(3)}, i);
+                String schema = result.getString(2);
+                if(!tree.containsId(schema)) {
+                    tree.addItem(schema);
+                    tree.setChildrenAllowed(schema, true);
+                    tree.setParent(schema, root);
+                }
+
+                String tbl = result.getString(3);
+                tree.addItem(tbl);
+                tree.setParent(tbl, schema);
+                tree.setChildrenAllowed(tbl, false);
             }
         } catch (SQLException sqle) {
             sqle.printStackTrace();
@@ -79,8 +107,6 @@ public class SQLView extends CustomComponent implements View {
             if (conn != null)
                 m_pool.releaseConnection(conn);
         }
-
-        table.setPageLength(table.size());
 
         m_pool.releaseConnection(conn);
 
