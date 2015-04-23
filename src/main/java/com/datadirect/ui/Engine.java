@@ -1,6 +1,5 @@
 package com.datadirect.ui;
 
-import com.datadirect.platform.D2CQueryEngineImpl;
 import com.datadirect.platform.QueryEngine;
 
 /**

@@ -22,11 +22,7 @@ public class SelectSourcesView extends CustomComponent implements View {
         @Override
         public void buttonClick(Button.ClickEvent event) {
 
-            try {
-                Engine.get().stop();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            Engine.get().stop();
             // "Logout" the user
             getSession().setAttribute("user", null);
             getSession().setAttribute("password", null);
@@ -77,6 +73,7 @@ public class SelectSourcesView extends CustomComponent implements View {
         try {
             for (DataSource ds : Engine.get().allDataSources()) {
                 sel.addItem(ds.getName());
+                ds.addProperty("importer.importKeys", "false");
                 allDatasources.put(ds.getName(), ds);
             }
         } catch (SQLException e) {
